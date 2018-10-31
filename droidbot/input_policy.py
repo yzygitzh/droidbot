@@ -49,6 +49,46 @@ class InputPolicy(object):
         self.device = device
         self.app = app
         self.master = None
+        self.policy_idx = 0
+
+        # init access control
+        self.__init_access_control()
+
+    def __get_next_policy_idx(self):
+        next_idx = self.policy_idx
+        if self.policy_idx + 1 < len(self.policy_json["policy_values"]):
+            self.policy_idx += 1
+        return next_idx
+
+    def __init_access_control(self):
+        with open("access_control_%s.json" % self.device.serial, "r") as f:
+            self.policy_json = json.load(f)
+            policy_keys = self.policy_json["policy_keys"]
+            policy_values = self.policy_json["policy_values"][0]
+            for policy_key, policy_value in zip(policy_keys, policy_values):
+                self.__modify_xprivacy_db(
+                    "insert into setting values "
+                    "(0,\\\"global\\\",\\\"%s\\\",\\\"%s\\\")" % (policy_key, policy_value))
+
+    def __perform_access_control(self):
+        policy_idx = self.__get_next_policy_idx()
+        policy_keys = self.policy_json["policy_keys"]
+        policy_values = self.policy_json["policy_values"][policy_idx]
+        for policy_key, policy_value in zip(policy_keys, policy_values):
+            self.__modify_xprivacy_db(
+                "update setting set "
+                "value = \\\"%s\\\" where "
+                "category = \\\"global\\\" and "
+                "name = \\\"%s\\\"" % (policy_value, policy_key))
+
+    def __modify_xprivacy_db(self, sql):
+        while True:
+            r = subprocess.check_call(
+                "adb -s %s shell'"
+                "sqlite3 /data/system/xlua/xlua.db "
+                "\"%s\"'" % (self.device.serial, sql), shell=True)
+            if not len(r):
+                break
 
     def start(self, input_manager):
         """
@@ -57,6 +97,8 @@ class InputPolicy(object):
         """
         count = 0
         while input_manager.enabled and count < input_manager.event_count:
+            # perform access control before sending any events
+            self.__perform_access_control()
             try:
                 # make sure the first event is go to HOME screen
                 # the second event is to start the app

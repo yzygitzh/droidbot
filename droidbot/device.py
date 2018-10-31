@@ -134,6 +134,7 @@ class Device(object):
         """
         Set connections on this device
         """
+        # install app, enable hook, restart, continue
         # wait for emulator to start
         self.wait_for_device()
         for adapter in self.adapters:
