@@ -61,8 +61,28 @@ class InputPolicy(object):
         return next_idx
 
     def __init_access_control(self):
+        # clear xprivacy db
+        self.__modify_xprivacy_db("delete from setting")
+        self.__modify_xprivacy_db("delete from assignment")
+
         with open("access_control_%s.json" % self.device.serial, "r") as f:
             self.policy_json = json.load(f)
+            # enable hook
+            target_apps = self.policy_json["target_apps"]
+            hooks = self.policy_json["hooks"]
+            for target_app in target_apps:
+                uid = self.device.get_uid(target_app)
+                for hook in hooks:
+                    self.__modify_xprivacy_db(
+                        "insert into assignment values "
+                        "(\\\"%s\\\",%d,\\\"%s\\\","
+                        "-1,-1,0,null,null,null)" % (target_app, uid, hook))
+                # kill app
+                pid = self.device.get_app_pid(target_app)
+                if pid is not None:
+                    self.device.adb.shell("kill -9 %d" % pid)
+
+            # fill in hook values
             policy_keys = self.policy_json["policy_keys"]
             policy_values = self.policy_json["policy_values"][0]
             for policy_key, policy_value in zip(policy_keys, policy_values):
@@ -82,12 +102,13 @@ class InputPolicy(object):
                 "name = \\\"%s\\\"" % (policy_value, policy_key))
 
     def __modify_xprivacy_db(self, sql):
+        import subprocess
         while True:
-            r = subprocess.check_call(
-                "adb -s %s shell'"
+            r = subprocess.check_output(
+                "adb -s %s shell '"
                 "sqlite3 /data/system/xlua/xlua.db "
                 "\"%s\"'" % (self.device.serial, sql), shell=True)
-            if not len(r):
+            if "locked" not in r.lower().decode():
                 break
 
     def start(self, input_manager):

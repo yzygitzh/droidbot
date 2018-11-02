@@ -1,0 +1,47 @@
+{
+    "views": {
+        "keyboard_button": {
+            "resource_id": ".*keyboard_indicator",
+            "class": ".*ImageView"
+        },
+        "input_text": {
+            "resource_id": ".*input_text",
+            "class": ".*EditText"
+        },
+        "send_button": {
+            "resource_id": ".*send_button",
+            "class": ".*ImageButton"
+        }
+    },
+    "states": {
+        "half_state": {
+            "views": ["keyboard_button"]
+        },
+        "full_state": {
+            "views": ["input_text"]
+        }
+    },
+    "operations": {
+        "half_operation": [
+            {
+                "event_type": "touch",
+                "target_view": "keyboard_button"
+            }
+        ],
+        "full_operation": [
+            {
+                "event_type": "set_text",
+                "target_view": "input_text",
+                "text": "what's the weather"
+            },
+            {
+                "event_type": "touch",
+                "target_view": "send_button"
+            }
+        ]
+    },
+    "main": {
+        "half_state": ["half_operation"],
+        "full_state": ["full_operation"]
+    }
+}

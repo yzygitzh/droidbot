@@ -134,7 +134,6 @@ class Device(object):
         """
         Set connections on this device
         """
-        # install app, enable hook, restart, continue
         # wait for emulator to start
         self.wait_for_device()
         for adapter in self.adapters:
@@ -907,3 +906,11 @@ class Device(object):
         if self.minicap.check_connectivity():
             print("[CONNECTION] %s is reconnected." % self.minicap.__class__.__name__)
         self.pause_sending_event = False
+
+    def get_uid(self, package_name):
+        r = self.adb.shell("dumpsys package %s" % package_name)
+        userid_line_re = re.compile('userId=([0-9]+)')
+        m = userid_line_re.search(r)
+        if m:
+            return int(m.group(1))
+        return None
