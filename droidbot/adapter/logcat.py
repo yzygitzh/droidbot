@@ -57,7 +57,7 @@ class Logcat(Adapter):
             if not isinstance(line, str):
                 line = line.decode()
             self.parse_line(line)
-            if f is not None:
+            if f is not None and "XLua" in line:
                 f.write(line)
         if f is not None:
             f.close()
