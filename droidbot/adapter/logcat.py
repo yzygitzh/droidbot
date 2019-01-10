@@ -56,6 +56,8 @@ class Logcat(Adapter):
             line = self.process.stdout.readline()
             if not isinstance(line, str):
                 line = line.decode()
+            if "ContentProviderProxy" not in line:
+                continue
             self.parse_line(line)
             if f is not None:
                 f.write(line)
