@@ -288,8 +288,12 @@ class EventLog(object):
                     output_dir = os.path.join(self.device.output_dir, "events")
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
+            full_event_trace_local_path = "%s/event_trace_%s.trace.full" % (output_dir, self.tag)
             event_trace_local_path = "%s/event_trace_%s.trace" % (output_dir, self.tag)
-            self.device.pull_file(self.trace_remote_file, event_trace_local_path)
+            self.device.pull_file(self.trace_remote_file, full_event_trace_local_path)
+            os.system("sed '/\*end/q' %s > %s" % \
+                      (full_event_trace_local_path, event_trace_local_path))
+            os.system("rm %s" % full_event_trace_local_path)
 
         except Exception as e:
             self.device.logger.warning("profiling event failed")
