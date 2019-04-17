@@ -438,14 +438,22 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         # get humanoid result, use the result to sort possible events
         # including back events
         if self.device.humanoid is not None:
-            possible_events = self.__sort_inputs_by_humanoid(possible_events)
+            possible_events, probs = self.__sort_inputs_by_humanoid(possible_events)
+
+        unexplored_possible_events = []
+        unexplored_probs = []
+        for event, prob in zip(possible_events, probs):
+            if not self.utg.is_event_explored(event=event, state=current_state):
+                unexplored_possible_events.append(event)
+                unexplored_probs.append(prob)
 
         # If there is an unexplored event, try the event first
-        for input_event in possible_events:
-            if not self.utg.is_event_explored(event=input_event, state=current_state):
-                self.logger.info("Trying an unexplored event.")
-                self.__event_trace += EVENT_FLAG_EXPLORE
-                return input_event
+        if len(unexplored_possible_events) > 0:
+            self.logger.info("Trying an unexplored event.")
+            self.__event_trace += EVENT_FLAG_EXPLORE
+            import numpy as np
+            event = np.random.choice(unexplored_possible_events, 1, p=unexplored_probs)
+            return event
 
         target_state = self.__get_nav_target(current_state)
         if target_state:
@@ -480,20 +488,12 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
                            self.device.display_info["height"]]
         }
         result = json.loads(proxy.predict(json.dumps(request_json)))
-        new_idx = result["indices"]
+        action_probs = result["action_probs"]
         text = result["text"]
-        new_events = []
-
-        # get rid of infinite recursive by randomizing first event
-        if not self.utg.is_state_reached(self.current_state):
-            new_first = random.randint(0, len(new_idx) - 1)
-            new_idx[0], new_idx[new_first] = new_idx[new_first], new_idx[0]
-
-        for idx in new_idx:
-            if isinstance(possible_events[idx], SetTextEvent):
-                possible_events[idx].text = text
-            new_events.append(possible_events[idx])
-        return new_events
+        for event in possible_events:
+            if isinstance(event, SetTextEvent):
+                event.text = text
+        return possible_events, action_probs
 
     def __get_nav_target(self, current_state):
         # If last event is a navigation event
