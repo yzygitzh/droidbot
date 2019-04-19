@@ -452,7 +452,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
             self.logger.info("Trying an unexplored event.")
             self.__event_trace += EVENT_FLAG_EXPLORE
             import numpy as np
-            event = np.random.choice(unexplored_possible_events, 1, p=unexplored_probs)
+            event = np.random.choice(unexplored_possible_events, p=unexplored_probs)
             return event
 
         target_state = self.__get_nav_target(current_state)
