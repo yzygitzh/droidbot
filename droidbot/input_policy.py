@@ -440,22 +440,22 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         if self.device.humanoid is not None:
             possible_events, probs = self.__sort_inputs_by_humanoid(possible_events)
 
-        unexplored_possible_events = []
-        unexplored_probs = []
-        for event, prob in zip(possible_events, probs):
-            if not self.utg.is_event_explored(event=event, state=current_state):
-                unexplored_possible_events.append(event)
-                unexplored_probs.append(max(1e-12, prob))
+            unexplored_possible_events = []
+            unexplored_probs = []
+            for event, prob in zip(possible_events, probs):
+                if not self.utg.is_event_explored(event=event, state=current_state):
+                    unexplored_possible_events.append(event)
+                    unexplored_probs.append(max(1e-12, prob))
 
-        # If there is an unexplored event, try the event first
-        if len(unexplored_possible_events) > 0:
-            self.logger.info("Trying an unexplored event.")
-            self.__event_trace += EVENT_FLAG_EXPLORE
-            import numpy as np
-            prob_sum = sum(unexplored_possible_events)
-            event = np.random.choice(np.array(unexplored_possible_events) / prob_sum,
-                                     p=unexplored_probs)
-            return event
+            # If there is an unexplored event, try the event first
+            if len(unexplored_possible_events) > 0:
+                self.logger.info("Trying an unexplored event.")
+                self.__event_trace += EVENT_FLAG_EXPLORE
+                import numpy as np
+                prob_sum = sum(unexplored_probs)
+                event = np.random.choice(unexplored_possible_events,
+                                         p=np.array(unexplored_probs) / prob_sum)
+                return event
 
         target_state = self.__get_nav_target(current_state)
         if target_state:
