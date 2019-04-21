@@ -435,7 +435,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
             # humanoid
             if self.device.humanoid is not None:
                 current_state_tag = current_state.tag if current_state is not None else None
-                last_event_tag = last_event.tag if self.last_event is not None else None
+                last_event_tag = self.last_event.tag if self.last_event is not None else None
                 possible_events, probs = self.__sort_inputs_by_humanoid(possible_events,
                                                                         explored_event_idx,
                                                                         current_state_tag,
