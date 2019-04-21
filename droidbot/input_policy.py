@@ -456,6 +456,12 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
                 event = np.random.choice(unexplored_possible_events,
                                          p=np.array(unexplored_probs) / prob_sum)
                 return event
+        else:
+            for input_event in possible_events:
+                if not self.utg.is_event_explored(event=input_event, state=current_state):
+                    self.logger.info("Trying an unexplored event.")
+                    self.__event_trace += EVENT_FLAG_EXPLORE
+                    return input_event
 
         target_state = self.__get_nav_target(current_state)
         if target_state:
