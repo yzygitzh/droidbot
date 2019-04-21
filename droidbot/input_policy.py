@@ -443,7 +443,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
                 import numpy as np
                 event_idx = np.random.choice(unexplored_event_idx,
                                              p=np.array(unexplored_probs) / sum(unexplored_probs))
-                return event
+                return possible_events[event_idx]
             else:
                 return possible_events[unexplored_event_idx[0]]
 
