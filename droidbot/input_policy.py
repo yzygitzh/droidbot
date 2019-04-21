@@ -434,10 +434,8 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
 
             # humanoid
             if self.device.humanoid is not None:
-                current_state_tag = current_state.tag if current_state is not None else None
                 possible_events, probs = self.__sort_inputs_by_humanoid(possible_events,
-                                                                        explored_event_idx,
-                                                                        current_state_tag)
+                                                                        explored_event_idx)
                 unexplored_probs = [max(1e-12, probs[x]) for x in unexplored_event_idx]
 
                 import numpy as np
@@ -466,7 +464,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         self.__event_trace += EVENT_FLAG_STOP_APP
         return IntentEvent(intent=stop_app_intent)
 
-    def __sort_inputs_by_humanoid(self, possible_events, explored_event_idx, current_state_tag):
+    def __sort_inputs_by_humanoid(self, possible_events, explored_event_idx):
         # Given possible events, explored events' idx, current state and last event,
         # return possible events set with new text and probabilities
         if sys.version.startswith("3"):
@@ -477,7 +475,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         request_json = {
             "possible_events": [x.__dict__ for x in possible_events],
             "explored_event_idx": explored_event_idx,
-            "current_state_tag": current_state_tag,
+            "current_state": self.current_state.to_dict() if self.current_state is not None else None,
             "screen_res": [self.device.display_info["width"],
                            self.device.display_info["height"]]
         }
