@@ -123,9 +123,6 @@ class UtgBasedInputPolicy(InputPolicy):
         self.current_state = None
         self.utg = UTG(device=device, app=app, random_input=random_input)
         self.script_event_idx = 0
-        if self.device.humanoid is not None:
-            self.humanoid_view_trees = []
-            self.humanoid_events = []
 
     def generate_event(self):
         """
@@ -141,12 +138,6 @@ class UtgBasedInputPolicy(InputPolicy):
             return KeyEvent(name="BACK")
 
         self.__update_utg()
-
-        # update last view trees for humanoid
-        if self.device.humanoid is not None:
-            self.humanoid_view_trees = self.humanoid_view_trees + [self.current_state.view_tree]
-            if len(self.humanoid_view_trees) > 4:
-                self.humanoid_view_trees = self.humanoid_view_trees[1:]
 
         event = None
 
@@ -166,12 +157,6 @@ class UtgBasedInputPolicy(InputPolicy):
 
         if event is None:
             event = self.generate_event_based_on_utg()
-
-        # update last events for humanoid
-        if self.device.humanoid is not None:
-            self.humanoid_events = self.humanoid_events + [event]
-            if len(self.humanoid_events) > 3:
-                self.humanoid_events = self.humanoid_events[1:]
 
         self.last_state = self.current_state
         self.last_event = event
@@ -435,33 +420,32 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         elif self.search_method == POLICY_GREEDY_BFS:
             possible_events.insert(0, KeyEvent(name="BACK"))
 
-        # get humanoid result, use the result to sort possible events
-        # including back events
-        if self.device.humanoid is not None:
-            possible_events, probs = self.__sort_inputs_by_humanoid(possible_events)
+        explored_event_idx = []
+        unexplored_event_idx = []
+        for idx, event in enumerate(possible_events):
+            if self.utg.is_event_explored(event=event, state=current_state):
+                explored_event_idx.append(idx)
+            else:
+                unexplored_event_idx.append(idx)
 
-            unexplored_possible_events = []
-            unexplored_probs = []
-            for event, prob in zip(possible_events, probs):
-                if not self.utg.is_event_explored(event=event, state=current_state):
-                    unexplored_possible_events.append(event)
-                    unexplored_probs.append(max(1e-12, prob))
+        if len(unexplored_event_idx) > 0:
+            self.logger.info("Trying an unexplored event.")
+            self.__event_trace += EVENT_FLAG_EXPLORE
 
-            # If there is an unexplored event, try the event first
-            if len(unexplored_possible_events) > 0:
-                self.logger.info("Trying an unexplored event.")
-                self.__event_trace += EVENT_FLAG_EXPLORE
+            # humanoid
+            if self.device.humanoid is not None:
+                possible_events, probs = self.__sort_inputs_by_humanoid(possible_events,
+                                                                        explored_event_idx,
+                                                                        current_state.tag,
+                                                                        self.last_event.tag)
+                unexplored_probs = [max(1e-12, probs[x]) for x in unexplored_event_idx]
+
                 import numpy as np
-                prob_sum = sum(unexplored_probs)
-                event = np.random.choice(unexplored_possible_events,
-                                         p=np.array(unexplored_probs) / prob_sum)
+                event_idx = np.random.choice(unexplored_event_idx,
+                                             p=np.array(unexplored_probs) / sum(unexplored_probs))
                 return event
-        else:
-            for input_event in possible_events:
-                if not self.utg.is_event_explored(event=input_event, state=current_state):
-                    self.logger.info("Trying an unexplored event.")
-                    self.__event_trace += EVENT_FLAG_EXPLORE
-                    return input_event
+            else:
+                return possible_events[unexplored_event_idx[0]]
 
         target_state = self.__get_nav_target(current_state)
         if target_state:
@@ -482,26 +466,30 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         self.__event_trace += EVENT_FLAG_STOP_APP
         return IntentEvent(intent=stop_app_intent)
 
-    def __sort_inputs_by_humanoid(self, possible_events):
+    def __sort_inputs_by_humanoid(self, possible_events, explored_event_idx,
+                                  current_state_tag, last_event_tag):
+        # Given possible events, explored events' idx, current state and last event,
+        # return possible events set with new text and probabilities
         if sys.version.startswith("3"):
             from xmlrpc.client import ServerProxy
         else:
             from xmlrpclib import ServerProxy
         proxy = ServerProxy("http://%s/" % self.device.humanoid)
         request_json = {
-            "history_view_trees": self.humanoid_view_trees,
-            "history_events": [x.__dict__ for x in self.humanoid_events],
             "possible_events": [x.__dict__ for x in possible_events],
+            "explored_event_idx": explored_event_idx,
+            "current_state_tag": current_state_tag,
+            "last_event_tag": last_event_tag,
             "screen_res": [self.device.display_info["width"],
                            self.device.display_info["height"]]
         }
         result = json.loads(proxy.predict(json.dumps(request_json)))
-        action_probs = result["action_probs"]
+        event_probs = result["action_probs"]
         text = result["text"]
         for event in possible_events:
             if isinstance(event, SetTextEvent):
                 event.text = text
-        return possible_events, action_probs
+        return possible_events, event_probs
 
     def __get_nav_target(self, current_state):
         # If last event is a navigation event
