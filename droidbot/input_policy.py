@@ -467,10 +467,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
     def __sort_inputs_by_humanoid(self, possible_events, explored_event_idx):
         # Given possible events, explored events' idx, current state and last event,
         # return possible events set with new text and probabilities
-        if sys.version.startswith("3"):
-            from xmlrpc.client import ServerProxy
-        else:
-            from xmlrpclib import ServerProxy
+        from xmlrpc.client import ServerProxy
         proxy = ServerProxy("http://%s/" % self.device.humanoid)
         request_json = {
             "possible_events": [x.__dict__ for x in possible_events],
