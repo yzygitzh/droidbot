@@ -83,7 +83,7 @@ def parse_args():
                         help="Declare the target device to be an emulator, which would be treated specially by DroidBot.")
     parser.add_argument("-accessibility_auto", action="store_true", dest="enable_accessibility_hard",
                         help="Enable the accessibility service automatically even though it might require device restart\n(can be useful for Android API level < 23).")
-    parser.add_argument("-humanoid", action="store", dest="humanoid",
+    parser.add_argument("-humanoid", action="store", dest="humanoid", required=True,
                         help="Connect to a Humanoid service (addr:port) for more human-like behaviors.")
     parser.add_argument("-ignore_ad", action="store_true", dest="ignore_ad",
                         help="Ignore Ad views by checking resource_id.")
