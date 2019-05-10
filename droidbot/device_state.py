@@ -1,6 +1,9 @@
 import copy
+import json
 import math
 import os
+
+from xmlrpc.client import ServerProxy
 
 from .utils import md5
 from .input_event import TouchEvent, LongTouchEvent, ScrollEvent, SetTextEvent, KeyEvent
@@ -23,8 +26,11 @@ class DeviceState(object):
         self.tag = tag
         self.screenshot_path = screenshot_path
         self.views = self.__parse_views(views)
-        self.view_tree = {}
-        self.__assemble_view_tree(self.view_tree, self.views)
+
+        # use humanoid to filter views
+        proxy = ServerProxy("http://%s/" % self.device.humanoid)
+        self.valid_view_ids = json.loads(proxy.render_views(json.dumps(self.views)))
+
         self.__generate_view_strs()
         self.state_str = self.__get_state_str()
         self.structure_str = self.__get_content_free_state_str()
@@ -59,18 +65,6 @@ class DeviceState(object):
             views.append(view_dict)
         return views
 
-    def __assemble_view_tree(self, root_view, views):
-        if not len(self.view_tree): # bootstrap
-            self.view_tree = copy.deepcopy(views[0])
-            self.__assemble_view_tree(self.view_tree, views)
-        else:
-            children = list(enumerate(root_view["children"]))
-            if not len(children):
-                return
-            for i, j in children:
-                root_view["children"][i] = copy.deepcopy(self.views[j])
-                self.__assemble_view_tree(root_view["children"][i], views)
-
     def __generate_view_strs(self):
         for view_dict in self.views:
             self.__get_view_str(view_dict)
@@ -96,40 +90,20 @@ class DeviceState(object):
         return md5(state_str_raw)
 
     def __get_state_str_raw(self):
-        if self.device.humanoid is not None:
-            import json
-            from xmlrpc.client import ServerProxy
-            proxy = ServerProxy("http://%s/" % self.device.humanoid)
-            return proxy.render_view_tree(json.dumps({
-                "view_tree": self.view_tree,
-                "screen_res": [self.device.display_info["width"],
-                               self.device.display_info["height"]]
-            }))
-        else:
-            view_signatures = set()
-            for view in self.views:
-                view_signature = DeviceState.__get_view_signature(view)
-                if view_signature:
-                    view_signatures.add(view_signature)
-            return "%s{%s}" % (self.foreground_activity, ",".join(sorted(view_signatures)))
+        view_signatures = set()
+        for view_id in self.valid_view_ids:
+            view_signature = DeviceState.__get_view_signature(self.views[view_id])
+            if view_signature:
+                view_signatures.add(view_signature)
+        return "%s{%s}" % (self.foreground_activity, ",".join(sorted(view_signatures)))
 
     def __get_content_free_state_str(self):
-        if self.device.humanoid is not None:
-            import json
-            from xmlrpc.client import ServerProxy
-            proxy = ServerProxy("http://%s/" % self.device.humanoid)
-            state_str = proxy.render_content_free_view_tree(json.dumps({
-                "view_tree": self.view_tree,
-                "screen_res": [self.device.display_info["width"],
-                               self.device.display_info["height"]]
-            }))
-        else:
-            view_signatures = set()
-            for view in self.views:
-                view_signature = DeviceState.__get_content_free_view_signature(view)
-                if view_signature:
-                    view_signatures.add(view_signature)
-            state_str = "%s{%s}" % (self.foreground_activity, ",".join(sorted(view_signatures)))
+        view_signatures = set()
+        for view_id in self.valid_view_ids:
+            view_signature = DeviceState.__get_content_free_view_signature(self.views[view_id])
+            if view_signature:
+                view_signatures.add(view_signature)
+        state_str = "%s{%s}" % (self.foreground_activity, ",".join(sorted(view_signatures)))
         import hashlib
         return hashlib.md5(state_str.encode('utf-8')).hexdigest()
 
@@ -400,13 +374,11 @@ class DeviceState(object):
         possible_events = []
         enabled_view_ids = []
         touch_exclude_view_ids = set()
-        for view_dict in self.views:
-            # exclude navigation bar if exists
-            if self.__safe_dict_get(view_dict, 'enabled') and \
-               self.__safe_dict_get(view_dict, 'resource_id') not in \
-               ['android:id/navigationBarBackground',
-                'android:id/statusBarBackground']:
-                enabled_view_ids.append(view_dict['temp_id'])
+
+        # use humanoid to filter enabled_view_ids
+        for view_id in self.valid_view_ids:
+            if self.__safe_dict_get(self.views[view_id], 'enabled'):
+                enabled_view_ids.append(view_id)
         enabled_view_ids.reverse()
 
         for view_id in enabled_view_ids:

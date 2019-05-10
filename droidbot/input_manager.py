@@ -3,6 +3,8 @@ import logging
 import subprocess
 import time
 
+from xmlrpc.client import ServerProxy
+
 from .input_event import EventLog
 from .input_policy import UtgBasedInputPolicy, UtgNaiveSearchPolicy, UtgGreedySearchPolicy, \
                          UtgReplayPolicy, \
@@ -103,10 +105,8 @@ class InputManager(object):
         event_log.stop()
 
         # send latest event tags to humanoid
-        if self.device.humanoid:
-            from xmlrpc.client import ServerProxy
-            proxy = ServerProxy("http://%s/" % self.device.humanoid)
-            proxy.push_event_tag(event_log.tag)
+        proxy = ServerProxy("http://%s/" % self.device.humanoid)
+        proxy.push_event_tag(event_log.tag)
 
     def start(self):
         """

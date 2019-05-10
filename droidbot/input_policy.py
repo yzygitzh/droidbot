@@ -1,8 +1,11 @@
 import sys
 import json
 import logging
+import numpy as np
 import random
+
 from abc import abstractmethod
+from xmlrpc.client import ServerProxy
 
 from .input_event import InputEvent, KeyEvent, IntentEvent, TouchEvent, ManualEvent, SetTextEvent
 from .utg import UTG
@@ -433,17 +436,12 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
             self.__event_trace += EVENT_FLAG_EXPLORE
 
             # humanoid
-            if self.device.humanoid is not None:
-                possible_events, probs = self.__sort_inputs_by_humanoid(possible_events,
-                                                                        explored_event_idx)
-                unexplored_probs = [max(1e-12, probs[x]) for x in unexplored_event_idx]
-
-                import numpy as np
-                event_idx = np.random.choice(unexplored_event_idx,
-                                             p=np.array(unexplored_probs) / sum(unexplored_probs))
-                return possible_events[event_idx]
-            else:
-                return possible_events[unexplored_event_idx[0]]
+            possible_events, probs = self.__sort_inputs_by_humanoid(possible_events,
+                                                                    explored_event_idx)
+            unexplored_probs = [max(1e-12, probs[x]) for x in unexplored_event_idx]
+            event_idx = np.random.choice(unexplored_event_idx,
+                                         p=np.array(unexplored_probs) / sum(unexplored_probs))
+            return possible_events[event_idx]
 
         target_state = self.__get_nav_target(current_state)
         if target_state:
@@ -467,7 +465,6 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
     def __sort_inputs_by_humanoid(self, possible_events, explored_event_idx):
         # Given possible events, explored events' idx, current state and last event,
         # return possible events set with new text and probabilities
-        from xmlrpc.client import ServerProxy
         proxy = ServerProxy("http://%s/" % self.device.humanoid)
         request_json = {
             "possible_events": [x.__dict__ for x in possible_events],
