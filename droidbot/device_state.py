@@ -29,7 +29,7 @@ class DeviceState(object):
 
         # use humanoid to filter views
         proxy = ServerProxy("http://%s/" % self.device.humanoid)
-        self.valid_view_ids = json.loads(proxy.render_views(json.dumps(self.views)))
+        self.valid_view_ids = json.loads(proxy.validate_views(json.dumps(self.views)))
 
         self.__generate_view_strs()
         self.state_str = self.__get_state_str()
