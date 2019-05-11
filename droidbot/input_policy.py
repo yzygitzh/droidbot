@@ -434,10 +434,9 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         if len(unexplored_event_idx) > 0:
             self.logger.info("Trying an unexplored event.")
             self.__event_trace += EVENT_FLAG_EXPLORE
-
             # humanoid
-            possible_events, probs = self.__sort_inputs_by_humanoid(possible_events,
-                                                                    explored_event_idx)
+            possible_events, probs = self.__get_event_probs(possible_events,
+                                                            explored_event_idx)
             unexplored_probs = [max(1e-12, probs[x]) for x in unexplored_event_idx]
             event_idx = np.random.choice(unexplored_event_idx,
                                          p=np.array(unexplored_probs) / sum(unexplored_probs))
@@ -462,7 +461,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         self.__event_trace += EVENT_FLAG_STOP_APP
         return IntentEvent(intent=stop_app_intent)
 
-    def __sort_inputs_by_humanoid(self, possible_events, explored_event_idx):
+    def __get_event_probs(self, possible_events, explored_event_idx):
         # Given possible events, explored events' idx, current state and last event,
         # return possible events set with new text and probabilities
         proxy = ServerProxy("http://%s/" % self.device.humanoid)
@@ -473,13 +472,8 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
             "screen_res": [self.device.display_info["width"],
                            self.device.display_info["height"]]
         }
-        result = json.loads(proxy.predict(json.dumps(request_json)))
-        event_probs = result["action_probs"]
-        text = result["text"]
-        for event in possible_events:
-            if isinstance(event, SetTextEvent):
-                event.text = text
-        return possible_events, event_probs
+        event_probs = json.loads(proxy.predict(json.dumps(request_json)))
+        return event_probs
 
     def __get_nav_target(self, current_state):
         # If last event is a navigation event

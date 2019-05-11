@@ -27,9 +27,9 @@ class DeviceState(object):
         self.screenshot_path = screenshot_path
         self.views = self.__parse_views(views)
 
-        # use humanoid to filter views
         proxy = ServerProxy("http://%s/" % self.device.humanoid)
         self.valid_view_ids = json.loads(proxy.validate_views(json.dumps(self.views)))
+        self.possible_texts = json.loads(proxy.possible_texts())
 
         self.__generate_view_strs()
         self.state_str = self.__get_state_str()
@@ -406,10 +406,9 @@ class DeviceState(object):
 
         for view_id in enabled_view_ids:
             if self.__safe_dict_get(self.views[view_id], 'editable'):
-                possible_events.append(SetTextEvent(view=self.views[view_id], text="HelloWorld"))
+                for possible_text in self.possible_texts:
+                    possible_events.append(SetTextEvent(view=self.views[view_id], text=possible_text))
                 touch_exclude_view_ids.add(view_id)
-                # TODO figure out what event can be sent to editable views
-                pass
 
         for view_id in enabled_view_ids:
             if view_id in touch_exclude_view_ids:
