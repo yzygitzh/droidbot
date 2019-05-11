@@ -435,8 +435,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
             self.logger.info("Trying an unexplored event.")
             self.__event_trace += EVENT_FLAG_EXPLORE
             # humanoid
-            possible_events, probs = self.__get_event_probs(possible_events,
-                                                            explored_event_idx)
+            event_probs = self.__get_event_probs(possible_events, explored_event_idx)
             unexplored_probs = [max(1e-12, probs[x]) for x in unexplored_event_idx]
             event_idx = np.random.choice(unexplored_event_idx,
                                          p=np.array(unexplored_probs) / sum(unexplored_probs))
