@@ -436,9 +436,9 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
             self.__event_trace += EVENT_FLAG_EXPLORE
             # humanoid
             event_probs = self.__get_event_probs(possible_events, explored_event_idx)
-            unexplored_probs = [max(1e-12, probs[x]) for x in unexplored_event_idx]
+            unexplored_event_probs = [max(1e-12, event_probs[x]) for x in unexplored_event_idx]
             event_idx = np.random.choice(unexplored_event_idx,
-                                         p=np.array(unexplored_probs) / sum(unexplored_probs))
+                                         p=np.array(unexplored_event_probs) / sum(unexplored_event_probs))
             return possible_events[event_idx]
 
         target_state = self.__get_nav_target(current_state)
