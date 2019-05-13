@@ -467,9 +467,7 @@ class UtgGreedySearchPolicy(UtgBasedInputPolicy):
         request_json = {
             "possible_events": [x.__dict__ for x in possible_events],
             "explored_event_idx": explored_event_idx,
-            "current_state": self.current_state.to_dict() if self.current_state is not None else None,
-            "screen_res": [self.device.display_info["width"],
-                           self.device.display_info["height"]]
+            "current_state": self.current_state.to_dict() if self.current_state is not None else None
         }
         event_probs = json.loads(proxy.predict(json.dumps(request_json)))
         return event_probs
