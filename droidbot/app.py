@@ -31,6 +31,8 @@ class App(object):
         self.main_activity = self.apk.get_main_activity()
         self.permissions = self.apk.get_permissions()
         self.activities = self.apk.get_activities()
+        with open(os.path.join(output_dir, "activities.txt"), "w") as f:
+            f.writelines([x + os.linesep for x in self.activities])
         self.possible_broadcasts = self.get_possible_broadcasts()
         self.dumpsys_main_activity = None
         self.hashes = self.get_hashes()
