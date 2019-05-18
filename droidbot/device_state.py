@@ -23,8 +23,9 @@ class DeviceState(object):
         self.tag = tag
         self.screenshot_path = screenshot_path
         self.views = self.__parse_views(views)
-        self.view_tree = {}
-        self.__assemble_view_tree(self.view_tree, self.views)
+        if self.device.humanoid is not None:
+            self.view_tree = {}
+            self.__assemble_view_tree(self.view_tree, self.views)
         self.__generate_view_strs()
         self.state_str = self.__get_state_str()
         self.structure_str = self.__get_content_free_state_str()
