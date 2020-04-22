@@ -434,8 +434,9 @@ class DeviceState(object):
 
         for view_id in enabled_view_ids:
             if self.__safe_dict_get(self.views[view_id], 'editable'):
-                possible_events.append(SetTextEvent(view=self.views[view_id], text="HelloWorld"))
-                touch_exclude_view_ids.add(view_id)
+                for input_text in ["HelloWorld", "test@abc.xyz", "5", "1234567890"]:
+                    possible_events.append(SetTextEvent(view=self.views[view_id], text=input_text))
+                    touch_exclude_view_ids.add(view_id)
                 # TODO figure out what event can be sent to editable views
                 pass
 
